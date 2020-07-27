@@ -105,7 +105,7 @@ def get_episodes_by_search(url):
 
 
 def get_episodes(url):
-  global baba
+  global parts_or_not
   """
   Geting the episodes from the broadcast.
   """
@@ -124,17 +124,18 @@ def get_episodes(url):
   log("a: %s" % len(links), 0)
   titles = el.find_all('h2', class_='news-title')
   log("h2: %s" % len(titles), 0)
-  link = el.find('a', class_="news-title-hld")
+  link_check = el.find('a', class_="news-title-hld")
 
   try:
-    rep = urllib2.Request(link['href'])
-    texp = urllib2.urlopen(rep).read()
-    souk = BeautifulSoup(texp, 'html5lib')
-    ol = souk.find('div', class_='tab-holder-0')
-    if ol:
-      baba = False
+    url_check = link_check['href']
+    req_check = urllib2.Request(url_check)
+    text_check = urllib2.urlopen(req_check).read()
+    soup_check = BeautifulSoup(text_check, 'html5lib')
+    el_check = soup_chek.find('div', class_='tab-holder-0')
+    if el_check:
+      parts_or_not = False
     else:
-      baba = True
+      parts_or_not = True
   except Exception as er:
     log("Adding pagination failed %s" % er, 4)
 
@@ -181,11 +182,11 @@ def show_episodes(episodes):
   """
 
   for episode in episodes:
-    if episode['title'] != next_page_title and episode['title'] != next_page_title2 and baba == True:
+    if episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == True:
       url = make_url({"action": "play_stream", "url": episode["url"]})
       add_listitem_unresolved(episode["title"], url, iconImage=episode['logo'], thumbnailImage=episode['logo'])
 
-    elif episode['title'] != next_page_title and episode['title'] != next_page_title2 and baba == False:
+    elif episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == False:
       url = make_url({"action": "show_parts", "url": episode["url"]})
       add_listitem_folder(episode["title"], url, iconImage=episode['logo'], thumbnailImage=episode['logo'])
 
