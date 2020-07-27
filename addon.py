@@ -131,7 +131,7 @@ def get_episodes(url):
     req_check = urllib2.Request(url_check)
     text_check = urllib2.urlopen(req_check).read()
     soup_check = BeautifulSoup(text_check, 'html5lib')
-    el_check = soup_chek.find('div', class_='tab-holder-0')
+    el_check = soup_check.find('div', class_='tab-holder-0')
     if el_check:
       parts_or_not = False
     else:
