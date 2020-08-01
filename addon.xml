@@ -16,8 +16,7 @@
     <language>bg</language>
     <description>Kodi addon for BNT</description>
     <assets>
-	    <icon>recources/icon.png</icon>
-      <screenshot>recources/screenshot_1.png</screenshot>
+	    <icon>icon.png</icon>
 	  </assets>
   </extension>
 </addon>
