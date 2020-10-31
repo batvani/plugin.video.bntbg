@@ -17,28 +17,22 @@ def get_parts(url):
   """
 
   parts = []  
-  log ("Get " + url, 2)
   req = urllib2.Request(url)
   text = urllib2.urlopen(req).read()
   soup = BeautifulSoup(text, 'html5lib')
   el = soup.find("div", class_="tab-holder-0")
-  
-  imgs = el.find_all('img')
-  log("imgs: %s" % len(imgs), 0)
-  links = el.find_all('a', class_="news-title-hld")
-  log("a: %s" % len(links), 0)
-  titles = el.find_all('h2', class_='news-title')
+
+  links = el.find_all('a', class_="hov-img")
   titles_ful_episode = el.find_all('h2', class_='opened-episode')
   img_holder = el.find_all('div', class_='news-img-hld')
-  log("h2: %s" % len(titles), 0)
-  log("h2 for ful episode: %s" % len(titles_ful_episode), 0)
   
-  for i in range(0, len(imgs)):
+  for i in range(0, len(links)):
     if img_holder[i].find_all('div', class_='whole-show'):
-      title = 'Цялото предаване - ' + titles_ful_episode[0].get_text().encode('utf-8')
+      title = "[COLOR red]"+'Цялото предаване - '+"[/COLOR]" + titles_ful_episode[0].get_text().encode('utf-8')
     else:
-      title = titles[i].get_text().encode('utf-8')
-    item = {"title": title, "url": links[i]['href'], "logo": imgs[i]['src']}
+      title = links[i]['title']
+    imgs = links[i].find('img')
+    item = {"title": title, "url": links[i]['href'], "logo": imgs['src']}
     parts.append(item)
 
   return parts
@@ -53,21 +47,18 @@ def get_products(url):
     return e['title']
 
   products = []  
-  log ("Get " + url, 2)
   req = urllib2.Request(url)
   req.add_header('User-agent', user_agent)
   text = urllib2.urlopen(req).read()
   soup = BeautifulSoup(text, 'html5lib')
   el = soup.find("div", class_="news-descr")
+
+  links = el.find_all('a', class_="hov-img")
   
-  imgs = el.find_all('img')
-  log("imgs: %s" % len(imgs), 0)
-  links = el.find_all('a', class_="news-title-hld")
-  log("a: %s" % len(links), 0)
-  
-  for i in range(0, len(imgs)):
+  for i in range(0, len(links)):
     title = links[i]['title']
-    item = {"title": title, "url": links[i]['href'], "logo": imgs[i]['src']}
+    imgs = links[i].find('img')
+    item = {"title": title, "url": links[i]['href'], "logo": imgs['src']}
     products.sort(key=SortKey)
     products.append(item)
 
@@ -80,22 +71,18 @@ def get_episodes_by_search(url):
   """
 
   episodes = []  
-  log ("Get " + url, 2)
   req = urllib2.Request(url)
   req.add_header('User-agent', user_agent)
   text = urllib2.urlopen(req).read()
   soup = BeautifulSoup(text, 'html5lib')
   el = soup.find("div", class_="col-fixed-big")
 
-
-  imgs = el.find_all('img')
-  log("imgs: %s" % len(imgs), 0)
-  links = el.find_all('a', class_="news-title-hld")
-  log("a: %s" % len(links), 0)
+  links = el.find_all('a', class_="hov-img")
   
-  for i in range(0, len(imgs)):
+  for i in range(0, len(links)):
     title = links[i]['title']
-    item = {"title": title, "url": links[i]['href'], "logo": imgs[i]['src']}
+    imgs = links[i].find('img')
+    item = {"title": title, "url": links[i]['href'], "logo": imgs['src']}
     episodes.append(item)
 
   #pagination
@@ -103,7 +90,6 @@ def get_episodes_by_search(url):
     next = soup.find('a', {'rel': 'next'})
     if next:
       item = {"title": next_page_title2, "url": next.get('href')}
-      log(item)
       episodes.append(item)
   except Exception as er:
     log("Adding pagination failed %s" % er, 4)
@@ -117,20 +103,14 @@ def get_episodes(url):
   Geting the episodes from the broadcast.
   """
 
-  episodes = []  
-  log ("Get " + url, 2)
+  episodes = []
   req = urllib2.Request(url)
   req.add_header('User-agent', user_agent)
   text = urllib2.urlopen(req).read()
   soup = BeautifulSoup(text, 'html5lib')
   el = soup.find('div', class_='tab-holder-1')
 
-  imgs = el.find_all('img')
-  log("imgs: %s" % len(imgs), 0)
-  links = el.find_all('a', class_="news-title-hld")
-  log("a: %s" % len(links), 0)
-  titles = el.find_all('h2', class_='news-title')
-  log("h2: %s" % len(titles), 0)
+  links = el.find_all('a', class_="hov-img")
   link_check = el.find('a', class_="news-title-hld")
 
   try:
@@ -146,9 +126,10 @@ def get_episodes(url):
   except Exception as er:
     log("Adding pagination failed %s" % er, 4)
 
-  for i in range(0, len(imgs)):
-    title = titles[i].get_text().encode('utf-8')
-    item = {"title": title, "url": links[i]['href'], "logo": imgs[i]['src']}
+  for i in range(0, len(links)):
+    title = links[i]['title']
+    imgs = links[i].find('img')
+    item = {"title": title, "url": links[i]['href'], "logo": imgs['src']}
     episodes.append(item)
 
   #pagination
@@ -212,7 +193,6 @@ def get_stream(url):
   Geting the broadcast.
   """
 
-  log ("GET " + url, 0)
   req = urllib2.Request(url)
   text = urllib2.urlopen(req).read()
   soup = BeautifulSoup(text, 'html5lib')
@@ -222,7 +202,6 @@ def get_stream(url):
   m = re.compile('https.*mp4').findall(text)
   if len(m) > 0:
     item["stream"] = m[0]
-    log("resolved stream: %s" % item["stream"], 0)
     
     p = re.compile('https.*png').findall(text)
     if len(m) > 0:
