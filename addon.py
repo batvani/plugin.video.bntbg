@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from kodibgcommon.utils import *
 
+parts_or_not = False
 
 def get_parts(url):
   """
@@ -15,6 +16,7 @@ def get_parts(url):
 
   """
 
+  num = 0
   parts = []  
   log ("Get " + url, 2)
   req = urllib2.Request(url)
@@ -27,10 +29,16 @@ def get_parts(url):
   links = el.find_all('a', class_="news-title-hld")
   log("a: %s" % len(links), 0)
   titles = el.find_all('h2', class_='news-title')
+  titles_ful_episode = el.find_all('h2', class_='opened-episode')
+  img_holder = el.find_all('div', class_='news-img-hld')
   log("h2: %s" % len(titles), 0)
+  log("h2 for ful episode: %s" % len(titles_ful_episode), 0)
   
   for i in range(0, len(imgs)):
-    title = titles[i].get_text().encode('utf-8')
+    if img_holder[i].find_all('div', class_='whole-show'):
+      title = 'Цялото предаване - ' + titles_ful_episode[0].get_text().encode('utf-8')
+    else:
+      title = titles[i].get_text().encode('utf-8')
     item = {"title": title, "url": links[i]['href'], "logo": imgs[i]['src']}
     parts.append(item)
 
@@ -133,9 +141,9 @@ def get_episodes(url):
     soup_check = BeautifulSoup(text_check, 'html5lib')
     el_check = soup_check.find('div', class_='tab-holder-0')
     if el_check:
-      parts_or_not = False
-    else:
       parts_or_not = True
+    else:
+      parts_or_not = False
   except Exception as er:
     log("Adding pagination failed %s" % er, 4)
 
@@ -182,11 +190,11 @@ def show_episodes(episodes):
   """
 
   for episode in episodes:
-    if episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == True:
+    if episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == False:
       url = make_url({"action": "play_stream", "url": episode["url"]})
       add_listitem_unresolved(episode["title"], url, iconImage=episode['logo'], thumbnailImage=episode['logo'])
 
-    elif episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == False:
+    elif episode['title'] != next_page_title and episode['title'] != next_page_title2 and parts_or_not == True:
       url = make_url({"action": "show_parts", "url": episode["url"]})
       add_listitem_folder(episode["title"], url, iconImage=episode['logo'], thumbnailImage=episode['logo'])
 
