@@ -16,7 +16,6 @@ def get_parts(url):
 
   """
 
-  num = 0
   parts = []  
   log ("Get " + url, 2)
   req = urllib2.Request(url)
