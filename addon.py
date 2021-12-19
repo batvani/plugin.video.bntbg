@@ -2,18 +2,21 @@
 import os
 import re
 import sys
+
 import urllib
 import urllib.parse
 import urllib.request
 from urllib.request import urlopen
 
 import requests
+from bs4 import BeautifulSoup
+import json
+
 import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 import xbmcvfs
-from bs4 import BeautifulSoup
 
 """
 Vars.
@@ -41,15 +44,17 @@ else:
 
 __url__ = sys.argv[0]
 __handle__ = int(sys.argv[1])
+__view_mode__ = 55
+
 items = [
-    {"title": "Live", "url": None, "action": "list_live", "thumb": bnt},
-    {'title': "БНТ 1", "url": 'https://bnt.bg/bnt1/shows', "action": "list_shows",
+    {"title": "На живо", "url": None, "action": "list_live", "thumb": bnt},
+    {'title': "БНТ 1", "url": 'https://bnt.bg/bnt1/shows', "action": "shows",
      'thumb': bnt1},
-    {'title': "БНТ 2", "url": 'https://bnt.bg/bnt2/shows', "action": "list_shows",
+    {'title': "БНТ 2", "url": 'https://bnt.bg/bnt2/shows', "action": "shows",
      'thumb': bnt2},
-    {'title': 'БНТ 3', "url": 'https://bnt.bg/bnt3/shows', "action": "list_shows",
+    {'title': 'БНТ 3', "url": 'https://bnt.bg/bnt3/shows', "action": "shows",
      'thumb': bnt3},
-    {'title': 'БНТ 4', "url": 'https://bnt.bg/bnt4/shows', "action": "list_shows",
+    {'title': 'БНТ 4', "url": 'https://bnt.bg/bnt4/shows', "action": "shows",
      'thumb': bnt4}
 ]
 items_live = [
@@ -63,7 +68,6 @@ items_live = [
      'thumb': bnt4}
 ]
 next_page_title = "Следваща страница"
-view_mode = 55
 
 """
 Helper functions.
@@ -92,28 +96,10 @@ Functions.
 Video playing.
 """
 def get_stream(url):
-    """
-    Geting the broadcast.
-    """
     text = urlopen(url).read()
-    if KodiV >= 19:
-        text_re = text.decode("utf-8")
-    else:
-        text_re = text
     soup = BeautifulSoup(text, 'html5lib')
-    item = {"stream": None, "thumb": None, "title": None}
-
-    title = str(soup.title.get_text())
-
-    m = re.findall("https.*mp4", text_re)
-    if len(m) > 0:
-        item["stream"] = m[0]
-
-        p = re.findall('https.*png', text_re)
-        if len(m) > 0:
-            item["thumb"] = p[0]
-        item['title'] = title
-    return item
+    video = json.loads(soup.find("video", {"id": "bnt-video"})["data-setup"])
+    return video["sources"][0]["src"]
 
 
 def play_video(url):
@@ -122,7 +108,7 @@ def play_video(url):
     :param url: str
     :return: None
     """
-    stream = get_stream(url)['stream']
+    stream = get_stream(url)
     # Create a playable item with a path to play.
     play_item = xbmcgui.ListItem(path=stream)
     # Pass the item to the Kodi player.
@@ -161,32 +147,29 @@ def get_live(url):
 
 
 def get_episodes(url):
-    check = False
-
     episodes = []
     text = urlopen(url).read()
     soup = BeautifulSoup(text, 'html5lib')
     el = soup.find('div', {"class": 'tab-holder-1'})
 
     links = el.find_all('a', {"class": "hov-img"})
-    link_check = el.find('a', {"class": "news-title-hld"})
 
-    try:
-        url_check = link_check['href']
-        text_check = urlopen(url_check).read()
-        soup_check = BeautifulSoup(text_check, 'html5lib')
-        el_check = soup_check.find('div', {"class": 'tab-holder-0'})
-        if el_check:
-            check = True
-        else:
-            check = False
-    except:
-        pass
+    # try:
+    #     url_check = link_check['href']
+    #     text_check = urlopen(url_check).read()
+    #     soup_check = BeautifulSoup(text_check, 'html5lib')
+    #     el_check = soup_check.find('div', {"class": 'tab-holder-0'})
+    #     if el_check:
+    #         check = True
+    #     else:
+    #         check = False
+    # except:
+    #     pass
 
     for i in range(0, len(links)):
         title = links[i]['title']
         imgs = links[i].find('img')
-        item = {"title": title, "url": links[i]['href'], "thumb": imgs['src'], "parts": check}
+        item = {"title": title, "url": links[i]['href'], "thumb": imgs['src']}
         episodes.append(item)
 
     # check for next page
@@ -222,30 +205,30 @@ def get_shows(url):
     return shows
 
 
-def get_parts(url):
-    """
-    Geting the parts from the page.
-    """
-
-    parts = []
-    text = urlopen(url).read()
-    soup = BeautifulSoup(text, 'html5lib')
-    el = soup.find("div", {"class": "tab-holder-0"})
-
-    links = el.find_all('a', {"class": "hov-img"})
-    titles_ful_episode = el.find_all('h2', {"class": 'opened-episode'})
-    img_holder = el.find_all('div', {"class": 'news-img-hld'})
-
-    for i in range(0, len(links)):
-        if img_holder[i].find_all('div', {"class": 'whole-show'}):
-            title = "[COLOR red]" + "Цялото предаване - " + "[/COLOR]" + titles_ful_episode[0].get_text()
-        else:
-            title = links[i]['titleTrue']
-        imgs = links[i].find('img')
-        item = {"title": title, "url": links[i]['href'], "thumb": imgs['src']}
-        parts.append(item)
-
-    return parts
+# def get_parts(url):
+#     """
+#     Geting the parts from the page.
+#     """
+#
+#     parts = []
+#     text = urlopen(url).read()
+#     soup = BeautifulSoup(text, 'html5lib')
+#     el = soup.find("div", {"class": "tab-holder-0"})
+#
+#     links = el.find_all('a', {"class": "hov-img"})
+#     titles_ful_episode = el.find_all('h2', {"class": 'opened-episode'})
+#     img_holder = el.find_all('div', {"class": 'news-img-hld'})
+#
+#     for i in range(0, len(links)):
+#         if img_holder[i].find_all('div', {"class": 'whole-show'}):
+#             title = "[COLOR red]" + "Цялото предаване - " + "[/COLOR]" + titles_ful_episode[0].get_text()
+#         else:
+#             title = links[i]['titleTrue']
+#         imgs = links[i].find('img')
+#         item = {"title": title, "url": links[i]['href'], "thumb": imgs['src']}
+#         parts.append(item)
+#
+#     return parts
 
 
 """
@@ -253,14 +236,16 @@ Listing.
 """
 def list_live():
     listitems = []
+
     for item in items_live:
         is_dir = False
         list_item = xbmcgui.ListItem(label=item['title'])
-        list_item.setInfo("Video", {"Title": item["title"]})
+        list_item.setInfo("video", {"title": item["title"]})
         list_item.setProperty('IsPlayable', 'true')
         list_item.setArt({"icon": item['thumb'], "thumb": item['thumb'], "fanart": item["thumb"]})
         url = make_url(item["action"], item["url"])
         listitems.append((url, list_item, is_dir))
+
     add_listitems(listitems)
 
 
@@ -269,29 +254,16 @@ def list_shows(shows):
     Create the list of video categories in the Kodi interface.
     :return: None
     """
-    # Create a list for our items.
     listing = []
-    # Iterate through categories
+
     for show in shows:
-        # Create a list item with a text label and a thumbnail image.
         list_item = xbmcgui.ListItem(label=show["title"])
-        # Setting the style of the list item.
         list_item.setArt({"icon": show['thumb'], "thumb": show['thumb'], "fanart": show["thumb"]})
-        # Set additional info for the list item.
-        # Here we use a category name for both properties for for simplicity's sake.
-        # For available properties see the following link:
-        # http://mirrors.xbmc.org/docs/python-docs/15.x-isengard/xbmcgui.html#ListItem-setInfo
         list_item.setInfo('Folder', {'title': show["title"]})
-        # Create a URL for the plugin recursive callback.
-        # Example: plugin://plugin.video.example/?action=listing&category=Animals
-        url = make_url("list_episodes", show["url"])
-        # is_folder = True means that this item opens a sub-list of lower level items.
+        url = make_url("episodes", show["url"])
         is_folder = True
-        # Add our item to the listing as a 3-element tuple.
         listing.append((url, list_item, is_folder))
-    # Add our listing to Kodi.
-    # Large lists and/or slower systems benefit from adding all items at once via addDirectoryItems
-    # instead of adding one by ove via addDirectoryItem.
+
     add_listitems(listing)
 
 
@@ -307,16 +279,13 @@ def list_episodes(episodes):
         is_folder = False
         list_item = xbmcgui.ListItem(label=episode['title'])
 
-        if episode['title'] != next_page_title and episode.get("parts") is False:
+        if episode['title'] != next_page_title:
             url = make_url("play", episode["url"])
             list_item.setProperty('IsPlayable', 'true')
             list_item.setInfo('video', {'title': episode['title']})
             is_folder = False
-        elif episode['title'] != next_page_title and episode.get("parts") is True:
-            url = make_url("list_parts", episode["url"])
-            is_folder = True
         elif episode["title"] == next_page_title:
-            url = make_url("list_episodes", episode["url"])
+            url = make_url("episodes", episode["url"])
             is_folder = True
 
         list_item.setArt({"icon": episode.get("thumb"), "thumb": episode.get("thumb"), "fanart": episode.get("thumb")})
@@ -325,36 +294,39 @@ def list_episodes(episodes):
     add_listitems(listing)
 
 
-def list_parts(parts):
-    listing = []
+# def list_parts(parts):
+#     listing = []
+#
+#     for part in parts:
+#         list_item = xbmcgui.ListItem(label=part['title'])
+#         list_item.setArt({"icon": part['thumb'], "thumb": part['thumb'], "fanart": part["thumb"]})
+#         list_item.setInfo('video', {'title': part['title']})
+#         list_item.setProperty('IsPlayable', 'true')
+#         is_folder = False
+#         url = make_url("play", part["url"])
+#         listing.append((url, list_item, is_folder))
+#
+#     add_listitems(listing)
 
-    for part in parts:
-        list_item = xbmcgui.ListItem(label=part['title'])
-        list_item.setArt({"icon": part['thumb'], "thumb": part['thumb'], "fanart": part["thumb"]})
-        list_item.setInfo('video', {'title': part['title']})
-        list_item.setProperty('IsPlayable', 'true')
-        is_folder = False
-        url = make_url("play", part["url"])
-        listing.append((url, list_item, is_folder))
 
-    add_listitems(listing)
-
-
+"""
+Main.
+"""
 def router(param_str):
-    global view_mode
+    global __view_mode__
+
     if KodiV >= 19:
         params = dict(urllib.parse.parse_qsl(param_str[1:]))
     else:
         params = dict(urllib.parse_qsl(param_str[1:]))
+
     if params:
         action = params["action"]
         url = params["url"]
-        if action == 'list_shows':
+        if action == 'shows':
             list_shows(get_shows(url))
-        elif action == "list_episodes":
+        elif action == "episodes":
             list_episodes(get_episodes(url))
-        elif action == "list_parts":
-            list_parts(get_parts(url))
         elif action == 'play':
             play_video(url)
         elif action == "live":
@@ -362,7 +334,7 @@ def router(param_str):
         elif action == "list_live":
             list_live()
     else:
-        view_mode = 50
+        __view_mode__ = 50
         listitems = []
         for item in items:
             is_dir = True
@@ -376,4 +348,4 @@ def router(param_str):
 if __name__ == '__main__':
     # Call the router function and pass the plugin call parameters to it.
     router(sys.argv[2])
-    xbmc.executebuiltin("Container.SetViewMode(%s)" % view_mode)
+    xbmc.executebuiltin("Container.SetViewMode(%s)" % __view_mode__)
